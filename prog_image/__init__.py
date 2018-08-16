@@ -1,0 +1,1 @@
+default_app_config = 'prog_image.apps.ProgImageConfig'
