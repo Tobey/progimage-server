@@ -19,4 +19,4 @@ app/.build
 /.helm/requirements.lock
 *.DS_Store
 *.sqlite3
-/image_store/uploads/
+/image_store/
