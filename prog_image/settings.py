@@ -39,6 +39,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
+    'rest_framework.authtoken',
     'prog_image',
 ]
 
@@ -129,3 +130,8 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'image_store')
 STATICFILES_DIRS = [
     MEDIA_ROOT
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 100
+}

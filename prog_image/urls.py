@@ -17,6 +17,7 @@ from django.conf import settings
 from django.conf.urls import url
 from django.conf.urls.static import static
 from django.contrib import admin
+from rest_framework.documentation import include_docs_urls
 from rest_framework.routers import SimpleRouter
 
 from prog_image.views import ImageViewSet
@@ -27,7 +28,9 @@ router.register('images', ImageViewSet)
 
 urlpatterns = [
     url(r'^admin/', admin.site.urls),
+    url(r'^docs/', include_docs_urls(title='ProgImage', description='A programmable image thing'))
 ]
 
 urlpatterns.extend(router.urls)
 urlpatterns.extend(static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT))
+

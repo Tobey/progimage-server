@@ -2,6 +2,9 @@ import base64
 from io import BytesIO
 
 from django.http import JsonResponse
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.schemas import AutoSchema
 
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import RetrieveModelMixin
@@ -25,14 +28,22 @@ class ImageViewSet(RetrieveModelMixin, ListModelMixin, CreateModelMixin, Generic
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
     filter_class = ImageFilter
+    schema = AutoSchema()
+
+    authentication_classes = (TokenAuthentication,)
+    permission_classes = (IsAuthenticated,)
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
 
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        queryset = queryset.filter(user=self.request.user)
+        return queryset
+
     def get_serializer_context(self):
         context = super().get_serializer_context()
-        if self.action == 'create' and isinstance(self.request.data, list):
-            context['many'] = True
+        context['many'] = True
         return context
 
     @action(methods=['GET'], detail=True)
@@ -66,10 +77,14 @@ class ImageViewSet(RetrieveModelMixin, ListModelMixin, CreateModelMixin, Generic
     @action(methods=['GET'], detail=True)
     def invert(self, request, pk):
         instance = self.get_object()
-        image = image_library.open(instance.image.file)
-        new_image  = image.transpose(image_library.FLIP_TOP_BOTTOM)
-        new_image.save(instance.image.file.name)
-        return super().retrieve(request, pk)
+        image_data, image_format= self.rotate(instance, direction=image_library.FLIP_TOP_BOTTOM)
+        return self.get_response(image_id=instance.id, image_data=image_data, image_type=image_format)
+
+    @action(methods=['GET'], detail=True)
+    def rotate(self, request, pk):
+        instance = self.get_object()
+        image_data, image_format= self.rotate(instance, direction=image_library.ROTATE_90)
+        return self.get_response(image_id=instance.id, image_data=image_data, image_type=image_format)
 
     @action(methods=['GET'], detail=True)
     def thumbnail(self, request, pk):
@@ -95,6 +110,15 @@ class ImageViewSet(RetrieveModelMixin, ListModelMixin, CreateModelMixin, Generic
         image.save(output, format=image_format)
         image_data = base64.b64encode(output.getvalue()).decode('utf-8')
         return image_data
+
+    @staticmethod
+    def rotate(image_obj, direction=None):
+        image = image_library.open(image_obj.image.file)
+        new_image = image.transpose(direction)
+        output = BytesIO()
+        new_image.save(output)
+        image_data = base64.b64encode(output.getvalue()).decode('utf-8')
+        return image_data, new_image.format
 
     @staticmethod
     def get_response(*, image_id, image_data, image_type):
