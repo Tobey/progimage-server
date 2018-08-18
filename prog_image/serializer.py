@@ -18,6 +18,7 @@ class Base64ImageField(serializers.ImageField):
 
 
 class BaseImageSerializer(serializers.ModelSerializer):
+    user = serializers.PrimaryKeyRelatedField(write_only=True, queryset=User.objects.all())
 
     class Meta:
         model = Image
@@ -26,7 +27,6 @@ class BaseImageSerializer(serializers.ModelSerializer):
 
 class ImageSerializer(BaseImageSerializer):
     image = Base64ImageField()
-    user = serializers.PrimaryKeyRelatedField(write_only=True, queryset=User.objects.all())
 
     def to_internal_value(self, data):
         data = data.copy()
