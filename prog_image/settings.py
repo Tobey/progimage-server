@@ -79,11 +79,20 @@ WSGI_APPLICATION = 'prog_image.wsgi.application'
 
 DATABASES = {
     'default': {
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'prog_image',
+        'USER': 'root',
+        'PASSWORD': 'root',
+        'HOST': 'mysql',
+        'PORT': '3306',
+    }
+}
+DATABASES = {
+    'default': {
         'ENGINE': 'django.db.backends.sqlite3',
         'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/1.9/ref/settings/#auth-password-validators

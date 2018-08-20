@@ -1,11 +1,31 @@
 import base64
+from io import BytesIO
 
+import requests
 from django.contrib.auth.models import User
+from django.core.files.uploadedfile import InMemoryUploadedFile
+from django.forms import URLField
 from rest_framework import serializers
 import magic
-
+from rest_framework.exceptions import APIException
 
 from prog_image.models import Image
+
+VALID_IMAGE_EXTENSIONS = [
+    'jpg',
+    'jpeg',
+    'png',
+    'gif',
+]
+
+url_field = URLField()
+
+
+def image_url_validator(url):
+    url = url_field.clean(url)
+    ext = url.rsplit('.', 1)[-1]
+    assert ext in VALID_IMAGE_EXTENSIONS, f'use valid image urls with extention {VALID_IMAGE_EXTENSIONS}'
+    return 1
 
 
 class Base64ImageField(serializers.ImageField):
@@ -19,26 +39,37 @@ class Base64ImageField(serializers.ImageField):
 
 class BaseImageSerializer(serializers.ModelSerializer):
     user = serializers.PrimaryKeyRelatedField(write_only=True, queryset=User.objects.all())
-
-    class Meta:
-        model = Image
-        fields = ('id', 'image', 'user')
-
-
-class ImageSerializer(BaseImageSerializer):
-    image = Base64ImageField()
+    image_url = serializers.URLField(validators=[image_url_validator], required=False)
 
     def to_internal_value(self, data):
         data = data.copy()
         data['user'] = self.context['request'].user.id
         return super().to_internal_value(data)
 
-    def to_representation(self, instance):
-        data = super().to_representation(instance)
-        if self.is_post:
-            data.pop('image')
-        return data
+    class Meta:
+        model = Image
+        fields = ('id', 'image', 'user', 'image_url')
 
-    @property
-    def is_post(self):
-        return self.context['request'].method == 'POST'
+
+class ImageSerializer(BaseImageSerializer):
+    image = Base64ImageField(required=True)
+
+    def download_image(self, url):
+        response = requests.get(url, timeout=5)
+        response.raise_for_status()
+        file = BytesIO()
+        file.write(response.content)
+        file.seek(0)
+        ext = url.rsplit('.', 1)[-1]
+        image_as_file = InMemoryUploadedFile(
+            file=file, field_name='image', name=f'uploaded.{ext}',
+            content_type='image/{ext}', size=len(response.content), charset=None
+        )
+        return image_as_file
+
+    def to_internal_value(self, data):
+        data = data.copy()
+        url = data.pop('image_url', None)
+        if url:
+            data['image'] = self.download_image(url[0])
+        return super().to_internal_value(data)

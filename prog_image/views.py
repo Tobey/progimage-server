@@ -4,8 +4,12 @@ from io import BytesIO
 from concurrent.futures import ThreadPoolExecutor
 
 from django.http import JsonResponse
+from django.db import transaction
 from django_filters.rest_framework import DjangoFilterBackend
 
+from rest_framework import status
+from rest_framework.parsers import MultiPartParser
+from rest_framework.response import Response
 from rest_framework.viewsets import GenericViewSet
 from rest_framework.mixins import RetrieveModelMixin
 from rest_framework.mixins import ListModelMixin
@@ -31,15 +35,13 @@ class ImageViewSet(RetrieveModelMixin, ListModelMixin, CreateModelMixin, Generic
 
     queryset = Image.objects.all()
     serializer_class = ImageSerializer
+    list_serializer_class = ImageSerializer
     filter_backends = (DjangoFilterBackend,)
     filter_class = ImageFilter
     schema = AutoSchema()
 
     authentication_classes = (TokenAuthentication,)
     permission_classes = (IsAuthenticated,)
-
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
 
     def get_objects(self):
         return self.filter_queryset(self.get_queryset())
@@ -49,10 +51,21 @@ class ImageViewSet(RetrieveModelMixin, ListModelMixin, CreateModelMixin, Generic
         queryset = queryset.filter(user=self.request.user)
         return queryset
 
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        context['many'] = True
-        return context
+    def get_serializer(self, *args, **kwargs):
+        if not kwargs.get('many'):
+            kwargs['many'] = not self.is_retrieve
+
+        return super().get_serializer(*args, **kwargs)
+
+    @transaction.atomic
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        self.reformat_payload(data)
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
     @action(methods=['GET'], detail=False)
     def png(self, request):
@@ -141,6 +154,15 @@ class ImageViewSet(RetrieveModelMixin, ListModelMixin, CreateModelMixin, Generic
         thumbnail_data = base64.b64encode(output.getvalue()).decode('utf-8')
         return dict(image_data=thumbnail_data, image_id=image_obj.id, image_format=image_format)
 
+    def reformat_payload(self, data):
+        """Reformat for bulk upload in html format [0]image, [1]image, ..."""
+
+        fields_to_format = ('image', 'image_url')
+        for field in fields_to_format:
+            images = data.getlist(field, [])
+            for idx, im in enumerate(images):
+                data[f'[{idx}]{field}'] = im
+
     def get_response(self, processed_images):
         response = []
         for image in processed_images:
@@ -150,3 +172,6 @@ class ImageViewSet(RetrieveModelMixin, ListModelMixin, CreateModelMixin, Generic
             ))
         return self.get_paginated_response(response)
 
+    @property
+    def is_retrieve(self):
+        return self.request.method == 'GET' and self.request.parser_context['kwargs'].get('pk')

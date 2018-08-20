@@ -1,11 +1,29 @@
 version: '3'
 
 services:
+  mysql:
+    container_name: prog-image-mysql
+    image: mysql:5.7
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "root"
+      MYSQL_USER: "root"
+      MYSQL_DATABASE: "prog_image"
+    volumes:
+      - mysql:/var/lib/mysql
+
   web:
     build: .
+    container_name: prog-image
     command: bash -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
     container_name: progimage
+    restart: always
     volumes:
       - .:/progimage
     ports:
       - "8000:8000"
+    depends_on:
+      - mysql
+
+volumes:
+  mysql: {}
