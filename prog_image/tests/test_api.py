@@ -2,6 +2,7 @@ import base64
 import os
 from unittest import mock
 
+import magic
 from django.test import TestCase
 from rest_framework.test import APIClient
 
@@ -92,6 +93,23 @@ class SiteTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response.json()['count'], 2)
         self.assertEqual(Image.objects.all().count(), 3)
+
+    def test_convert_jpg_to_png(self):
+        response = self.client.post('/images/', data={'image': self.image_file})
+        pk = response.json()[0]['id']
+
+        response = self.client.get(f'/images/{pk}/')
+        image_data = base64.b64decode(response.json()['image']['data'])
+        image_type = magic.from_buffer(image_data, mime=True)
+        self.assertEqual(image_type, 'image/jpeg')
+
+        response = self.client.get(f'/images/png/?id__in={pk}')
+        image_data = base64.b64decode(response.json()['results'][0]['image']['data'])
+        image_type = magic.from_buffer(image_data, mime=True)
+        self.assertEqual(image_type, 'image/png')
+
+
+
 
     @property
     def image_file(self):

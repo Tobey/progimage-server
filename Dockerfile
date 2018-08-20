@@ -9,5 +9,7 @@ WORKDIR /progimage
 
 ADD . /progimage/
 
+ENV USING_DOCKER True
+
 RUN pip install -r requirements.txt
 
