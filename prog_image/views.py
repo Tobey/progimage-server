@@ -172,4 +172,4 @@ class ImageViewSet(RetrieveModelMixin, ListModelMixin, CreateModelMixin, Generic
 
     @property
     def is_retrieve(self):
-        return self.request.method == 'GET' and self.request.parser_context['kwargs'].get('pk')
+        return self.request and self.request.method == 'GET' and self.request.parser_context['kwargs'].get('pk')

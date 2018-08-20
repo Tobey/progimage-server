@@ -3,6 +3,8 @@ PROGIMAGE SERVER
 
 Provides a RESTful (JSON) API for image manipulation and a [client library](https://github.com/tobey/progimage-client)
 
+Using python3.6+
+
 Images serialized as base64 encoded strings:
 
 ```python
@@ -24,7 +26,7 @@ This will start a local mysql db and django app
 
 Without docker
 ```
-pip install -r requeirments.txt 
+pip install -r requirements.txt 
 
 ```
 
@@ -49,7 +51,6 @@ API interface
 Use [client library](https://github.com/tobey/progimage-client)
 
 
-
 API methods (Fully documented using djangorestframework + coreapi)
 
 ```
@@ -72,3 +73,4 @@ NOTES
 * Restframework for api + Auth
 * ThreadPoolExecutor for batch processing
 * PIL for image processing
+* Docker for containerization
