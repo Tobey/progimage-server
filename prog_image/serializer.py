@@ -1,15 +1,17 @@
 import base64
 from io import BytesIO
 
-import requests
-from django.contrib.auth.models import User
-from django.core.files.uploadedfile import InMemoryUploadedFile
-from django.forms import URLField
-from rest_framework import serializers
 import magic
-from rest_framework.exceptions import APIException
+import requests
+
+from django.contrib.auth.models import User
+from django.forms import URLField
+from django.core.files.uploadedfile import InMemoryUploadedFile
+
+from rest_framework import serializers
 
 from prog_image.models import Image
+
 
 VALID_IMAGE_EXTENSIONS = [
     'jpg',
@@ -25,7 +27,7 @@ def image_url_validator(url):
     url = url_field.clean(url)
     ext = url.rsplit('.', 1)[-1]
     assert ext in VALID_IMAGE_EXTENSIONS, f'use valid image urls with extention {VALID_IMAGE_EXTENSIONS}'
-    return 1
+    return url
 
 
 class Base64ImageField(serializers.ImageField):
