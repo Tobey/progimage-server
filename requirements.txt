@@ -6,4 +6,4 @@ coreapi==2.3.3
 Pillow==5.2.0
 python-magic==0.4.15
 coreapi==2.3.3
-requests==2.19.1
+requests==2.20.0
